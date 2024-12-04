@@ -1,25 +1,204 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "241203_Reproducible Research Module 2 Project 1"
+author: "Anthony Shin"
+date: "2024-12-03"
+output: html_document
 ---
-
-
-## Loading and preprocessing the data
-
-
 
 ## What is mean total number of steps taken per day?
 
+Here are the questions:  
 
+1. Calculate the total number of steps taken per day. 
+
+2. If you do not understand the difference between a histogram and a barplot, research the difference between them. Make a histogram of the total number of steps taken each day. 
+
+3. Calculate and report the mean and median of the total number of steps taken per day. 
+
+To answer the questions, I will first look at the data structure.
+
+```{r}
+df = read.csv('activity.csv')
+str(df)
+```
+
+I will now calculate the total number of steps taken per day.
+
+```{r}
+library(tidyverse)
+total_steps = df |> 
+  group_by(date) |> 
+  na.omit() |> 
+  summarize(
+    steps = sum(steps)
+  )
+total_steps
+```
+
+Now that the total steps have been framed into a tibble, I will plot a histogram to visualize the result as follows:
+
+```{r}
+ggplot(total_steps) +
+  aes(
+  x = steps
+  ) +
+  geom_histogram() +
+  theme_classic()
+```
+
+Now report mean and median of steps per day.
+
+```{r}
+total_steps |> 
+  summarize(
+    mean = mean(steps),
+    median = median(steps)
+  )
+```
 
 ## What is the average daily activity pattern?
 
+Here are two questions under this section:
 
+1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+For the first question, the strategy would be (1) group by intervals, then (2) average the steps. 
+
+Do the following:
+
+```{r}
+df_int = df |> 
+  group_by(interval) |> 
+  na.omit() |> 
+  summarize(
+    steps = mean(steps)
+  )
+df_int
+# Now, plot it
+ggplot(df_int) +
+  aes(
+    x = interval, 
+    y = steps
+  ) + 
+  geom_line() + 
+  theme_classic() +
+  labs(
+    title = 'Average steps across days per interval',
+    y = 'Average Steps'
+  )
+```
+
+Now to answer the second question, I need to identify which interval yielded the maximum average steps. I can filter that.
+
+```{r}
+df_int |> 
+  filter(steps == max(steps))
+
+```
+The result yields that the interval 835 gives the maximum average step of 206. 
 
 ## Imputing missing values
 
+There are four questions to answer:
 
+1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+
+2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+4. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+To answer the first question:
+
+```{r}
+sum(is.na(df$steps))
+```
+The answer is provided to be 2304. 
+
+Now moving onto the second question. I would just replace the NA with mean for that 5-minute interval. I could use `replace_na()` function to replace. I would take the steps from `df_int`, and use that value to replace NA values from the original df, save it as df_na_replaced. 
+
+For the third question, now I will actually create the dataset. (For this section of the code, I received help from ChatGPT due to my lack of knowledge on suitable codes.)
+
+```{r}
+# Replace NA values in the steps column
+df_na_replaced = df |> 
+  left_join(df_int, by = "interval", suffix = c("", "_mean")) |> 
+  mutate(
+    steps = ifelse(is.na(steps), steps_mean, steps)
+  ) |> 
+  select(-steps_mean) # Remove the helper column
+head(df_na_replaced)
+```
+
+Now to make a histogram, the x would be day and total number of steps would be y, which is sum of steps for each day. I need to make that first from the df_na_replaced.
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+df_na_replaced_total_steps = df_na_replaced |> 
+  group_by(date) |> 
+  summarize(
+    step_total = sum(steps)
+  )
+
+head(df_na_replaced_total_steps)
+
+ggplot(df_na_replaced_total_steps) +
+  aes(
+    x = step_total
+  ) +
+  geom_histogram() +
+  theme_classic()
+```
+
+Now the above would be the histogrram. In order to determine the mean and median, I could calculate mean and median from the df_na_replaced_total steps:
+
+```{r}
+mean_med_na_replaced = tibble(
+  step_mean = mean(df_na_replaced_total_steps$step_total),
+step_median = median(df_na_replaced_total_steps$step_total)
+)
+mean_med_na_replaced
+
+```
+
+We can see that while the mean is the same (10766), the median turns out to be different when NA is replaced (10766) as opposed to not replaced (10765).
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+> For this part the `weekdays()` function may be of some help here. Use the dataset with the filled-in missing values for this part.
+
+```{r}
+df$date <- as.Date(strptime(df$date, format="%Y-%m-%d"))
+
+head(df)
+
+df$dayType <- sapply(df$date, function(x) {
+  if(weekdays(x) == "Saturday" | weekdays(x) == "Sunday")
+  {y <- "Weekend"}
+  else {y <- "Weekday"}
+  y
+})
+
+head(df)
+
+df_by_day <-  aggregate(steps ~ interval + dayType, df, mean, na.rm = TRUE)
+
+head(df_by_day)
+
+# Plotting using ggplot2
+dayPlot <-  ggplot(df_by_day, aes(x = interval , y = steps, color = dayType)) + 
+  geom_line() + ggtitle("Average Daily Steps by Day Type") + 
+  xlab("Interval") + 
+  ylab("Average Number of Steps") +
+  facet_wrap(~dayType, ncol = 1, nrow=2) +
+  scale_color_discrete(name = "Day Type") +
+  theme_classic()
+
+print(dayPlot) 
+```
+
+This is the end of the assignment.

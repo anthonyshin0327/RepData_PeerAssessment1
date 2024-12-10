@@ -370,13 +370,6 @@ total number of steps taken each day.</p></li>
 steps taken per day.</p></li>
 </ol>
 <p>To answer the questions, I will first look at the data structure.</p>
-<pre class="r"><code>df = read.csv(&#39;activity.csv&#39;)
-str(df)</code></pre>
-<pre><code>## &#39;data.frame&#39;:    17568 obs. of  3 variables:
-##  $ steps   : int  NA NA NA NA NA NA NA NA NA NA ...
-##  $ date    : chr  &quot;2012-10-01&quot; &quot;2012-10-01&quot; &quot;2012-10-01&quot; &quot;2012-10-01&quot; ...
-##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...</code></pre>
-<p>I will now calculate the total number of steps taken per day.</p>
 <pre class="r"><code>library(tidyverse)</code></pre>
 <pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
 ## ✔ dplyr     1.1.4     ✔ readr     2.1.5
@@ -388,7 +381,22 @@ str(df)</code></pre>
 ## ✖ dplyr::filter() masks stats::filter()
 ## ✖ dplyr::lag()    masks stats::lag()
 ## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
-<pre class="r"><code>total_steps = df |&gt; 
+<pre class="r"><code>setwd(&#39;~/Downloads&#39;)
+
+temp &lt;- tempfile()
+download.file(&quot;https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip&quot;,temp, method=&#39;curl&#39;)
+df &lt;- read.csv(unz(temp, &quot;activity.csv&quot;))
+unlink(temp)
+
+
+str(df)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    17568 obs. of  3 variables:
+##  $ steps   : int  NA NA NA NA NA NA NA NA NA NA ...
+##  $ date    : chr  &quot;2012-10-01&quot; &quot;2012-10-01&quot; &quot;2012-10-01&quot; &quot;2012-10-01&quot; ...
+##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...</code></pre>
+<p>I will now calculate the total number of steps taken per day.</p>
+<pre class="r"><code>library(tidyverse)
+total_steps = df |&gt; 
   group_by(date) |&gt; 
   na.omit() |&gt; 
   summarize(

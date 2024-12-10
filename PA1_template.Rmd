@@ -18,6 +18,8 @@ Here are the questions:
 To answer the questions, I will first look at the data structure.
 
 ```{r}
+library(tidyverse)
+setwd('~/Downloads')
 df = read.csv('activity.csv')
 str(df)
 ```
